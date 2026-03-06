@@ -1,0 +1,32 @@
+{
+  "name": "@k-codex/yandex-direct-sdk",
+  "version": "0.1.0",
+  "description": "Core transport/auth foundation for Yandex Direct API SDK.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build --silent && node --test tests/*.test.mjs"
+  },
+  "keywords": [
+    "yandex",
+    "direct",
+    "sdk"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.4.0",
+    "typescript": "^5.9.2"
+  }
+}
