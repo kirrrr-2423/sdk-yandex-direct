@@ -1,4 +1,4 @@
-import { YandexDirectTransport } from "../src/index.js";
+import { AdsService, YandexDirectTransport } from "../src/index.js";
 
 async function main() {
   const token = process.env.YANDEX_DIRECT_TOKEN;
@@ -13,17 +13,17 @@ async function main() {
     useOperatorUnits: true,
   });
 
-  const response = await transport.requestService("campaigns", {
-    method: "get",
-    params: {
-      SelectionCriteria: {},
-      FieldNames: ["Id", "Name"],
-    },
+  const ads = new AdsService(transport);
+
+  const response = await ads.get({
+    SelectionCriteria: { Ids: [123456789] },
+    FieldNames: ["Id", "CampaignId", "AdGroupId", "Type", "Status", "State"],
+    TextAdFieldNames: ["Title", "Text", "Href"],
   });
 
   console.log("requestId:", response.metadata.requestId);
   console.log("units:", response.metadata.units);
-  console.log("payload:", response.data);
+  console.log("ads:", response.data.result.Ads);
 }
 
 main().catch((error) => {

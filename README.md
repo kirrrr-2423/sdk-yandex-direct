@@ -1,9 +1,10 @@
-# Yandex Direct SDK (Core Transport/Auth)
+# Yandex Direct SDK (Core Transport/Auth + Ads MVP)
 
 This package provides transport and auth primitives for Yandex Direct API v5:
 
 - JSON service endpoint: `/json/v5/{service}`
 - Reports endpoint: `/json/v5/reports`
+- Ads service MVP: `get`, `add`, `update`, `suspend`, `resume`
 - Typed client config and request options
 - Deterministic timeout + retry defaults with idempotent-safe guard
 - Safe request/response hooks with secret redaction by default
@@ -17,7 +18,7 @@ npm install @k-codex/yandex-direct-sdk
 ## Quick Start
 
 ```ts
-import { YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
+import { AdsService, YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
 
 const transport = new YandexDirectTransport({
   token: process.env.YANDEX_DIRECT_TOKEN,
@@ -26,16 +27,16 @@ const transport = new YandexDirectTransport({
   useOperatorUnits: true,
 });
 
-const campaigns = await transport.requestService("campaigns", {
-  method: "get",
-  params: {
-    SelectionCriteria: {},
-    FieldNames: ["Id", "Name"],
-  },
+const ads = new AdsService(transport);
+
+const response = await ads.get({
+  SelectionCriteria: { Ids: [123456789] },
+  FieldNames: ["Id", "CampaignId", "AdGroupId", "Type", "Status", "State"],
+  TextAdFieldNames: ["Title", "Text", "Href"],
 });
 
-console.log(campaigns.metadata.requestId);
-console.log(campaigns.data);
+console.log(response.metadata.requestId);
+console.log(response.data.result.Ads);
 ```
 
 ## Config
@@ -76,6 +77,39 @@ await transport.requestService(
   { method: "get", params: {} },
   { idempotent: true },
 );
+```
+
+## Ads Service MVP
+
+Supported ad formats in v1 mutation/get payloads:
+- `TextAd`
+- `MobileAppAd`
+
+Unsupported ad format variants fail fast with `UnsupportedAdFormatError`.
+
+```ts
+import { AdsService, UnsupportedAdFormatError, YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
+
+const ads = new AdsService(new YandexDirectTransport({ token: process.env.YANDEX_DIRECT_TOKEN }));
+
+try {
+  await ads.add({
+    Ads: [
+      {
+        AdGroupId: 123,
+        TextAd: {
+          Title: "New title",
+          Text: "New body",
+          Href: "https://example.com",
+        },
+      },
+    ],
+  });
+} catch (error) {
+  if (error instanceof UnsupportedAdFormatError) {
+    console.error(error.reason, error.receivedFormat);
+  }
+}
 ```
 
 ## Reports Example
@@ -134,3 +168,4 @@ const transport = new YandexDirectTransport({
 - `ApiError`: Yandex envelope error
 - `AuthError`: auth/authorization failures
 - `RateLimitError`: rate-limit/quota failures (retryable)
+- `UnsupportedAdFormatError`: ad format outside current Ads MVP union
