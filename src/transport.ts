@@ -1,9 +1,9 @@
 import {
   ApiError,
-  RateLimitError,
   TimeoutError,
   TransportError,
   classifyApiError,
+  classifyRetryability,
   toTransportError,
 } from "./errors.js";
 import { sanitizeHeaders, sanitizePayload, toHeaderRecord } from "./hooks.js";
@@ -32,8 +32,6 @@ const DEFAULT_RETRY_POLICY: RetryPolicy = {
   maxDelayMs: 1_000,
   backoffFactor: 2,
 };
-
-const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 interface ExecuteRequest {
   endpoint: "service" | "reports";
@@ -117,27 +115,23 @@ function defaultShouldRetry(context: RetryContext): boolean {
     return false;
   }
 
-  if (context.error instanceof TimeoutError || context.error instanceof RateLimitError) {
+  if (context.error instanceof TimeoutError) {
     return true;
   }
 
-  if (context.error instanceof TransportError) {
-    if (context.error.status === undefined) {
-      return true;
-    }
-
-    return TRANSIENT_HTTP_STATUSES.has(context.error.status);
-  }
-
-  if (context.error instanceof ApiError) {
+  if (context.error instanceof ApiError || context.error instanceof TransportError) {
     return context.error.retryable;
   }
 
   if (context.response) {
-    return TRANSIENT_HTTP_STATUSES.has(context.response.status);
+    return classifyRetryability({ status: context.response.status }).retryable;
   }
 
-  return true;
+  if (context.error) {
+    return classifyRetryability({ cause: context.error }).retryable;
+  }
+
+  return false;
 }
 
 function defaultDelayMs(policy: RetryPolicy, attempt: number): number {
@@ -193,7 +187,7 @@ async function parseBody(endpoint: "service" | "reports", response: Response): P
   try {
     return JSON.parse(textBody) as JsonEnvelope;
   } catch {
-    if (endpoint === "reports") {
+    if (endpoint === "reports" || !response.ok) {
       return textBody;
     }
     throw new TransportError("Failed to parse JSON response from Yandex Direct API.", {
@@ -306,14 +300,14 @@ export class YandexDirectTransport {
         const parsed = await parseBody(request.endpoint, response);
         const apiError = extractApiError(parsed);
         if (apiError) {
-          throw classifyApiError(apiError, response.status, metadata);
+          throw classifyApiError(apiError, response.status, metadata, parsed);
         }
 
         if (!response.ok) {
           throw new TransportError(`HTTP ${response.status} from Yandex Direct API.`, {
             status: response.status,
             metadata,
-            retryable: TRANSIENT_HTTP_STATUSES.has(response.status),
+            rawPayload: parsed,
           });
         }
 

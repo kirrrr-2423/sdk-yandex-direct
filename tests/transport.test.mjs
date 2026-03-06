@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  ApiBusinessError,
   AuthError,
   TimeoutError,
   TransportError,
+  classifyRetryability,
   YandexDirectTransport,
 } from "../dist/index.js";
 
@@ -187,6 +189,66 @@ test("API auth failures map to AuthError", async () => {
       return true;
     },
   );
+});
+
+test("API business failures map to ApiBusinessError with sanitized raw payload", async () => {
+  const transport = new YandexDirectTransport({
+    token: "token",
+    fetch: async () => jsonResponse({
+      error: {
+        request_id: "req-business-1",
+        error_code: 1000,
+        error_string: "Temporary backend failure, retry later",
+        error_detail: "Please retry the request later",
+      },
+      debug: {
+        trace: "Bearer sdk-secret-token",
+        access_token: "should-not-leak",
+        hint: "retry",
+      },
+    }),
+  });
+
+  await assert.rejects(
+    () => transport.requestService("campaigns", { method: "get" }, { idempotent: true }),
+    (error) => {
+      assert.ok(error instanceof ApiBusinessError);
+      assert.equal(error.retryable, true);
+      assert.equal(error.retryReason, "api_transient");
+      assert.equal(error.requestId, "req-business-1");
+      assert.equal(error.errorDetail, "Please retry the request later");
+      assert.equal(error.rawPayload.debug.trace, "Bearer <redacted>");
+      assert.equal(error.rawPayload.debug.access_token, "<redacted>");
+      return true;
+    },
+  );
+});
+
+test("classifyRetryability handles auth/rate/network/http/api cases", () => {
+  assert.deepEqual(classifyRetryability({ status: 401 }), {
+    retryable: false,
+    reason: "auth",
+  });
+  assert.deepEqual(classifyRetryability({ status: 429 }), {
+    retryable: true,
+    reason: "rate_limit",
+  });
+  assert.deepEqual(classifyRetryability({ cause: { code: "ECONNRESET" } }), {
+    retryable: true,
+    reason: "network_transient",
+  });
+  assert.deepEqual(classifyRetryability({ status: 503 }), {
+    retryable: true,
+    reason: "http_transient",
+  });
+  assert.deepEqual(classifyRetryability({ errorString: "Temporary outage, retry later" }), {
+    retryable: true,
+    reason: "api_transient",
+  });
+  assert.deepEqual(classifyRetryability({ errorString: "Validation failed" }), {
+    retryable: false,
+    reason: "not_retryable",
+  });
 });
 
 test("hooks receive redacted request/response payloads", async () => {
