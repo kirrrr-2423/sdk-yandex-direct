@@ -159,8 +159,12 @@ const transport = new YandexDirectTransport({
 
 ## Errors
 
-- `TransportError`: non-business transport/HTTP failure
-- `TimeoutError`: request exceeded timeout
-- `ApiError`: Yandex envelope error
-- `AuthError`: auth/authorization failures
-- `RateLimitError`: rate-limit/quota failures (retryable)
+- `SdkError`: stable base class (`code`, `retryable`, `retryReason`)
+- `TransportError`: HTTP/network/serialization failures with `status`, `requestId`, `units`, `rawPayload`
+- `TimeoutError`: request exceeded timeout (`retryReason: "timeout"`)
+- `ApiError`: base envelope error with mapped fields (`error_code`, `error_string`, `error_detail`, `request_id`)
+- `ApiBusinessError`: non-auth, non-rate business envelope error
+- `AuthError`: auth/authorization failures (`retryable: false`)
+- `RateLimitError`: rate-limit/quota failures (`retryable: true`)
+
+Retry logic uses exported `classifyRetryability(...)` for deterministic classification of auth/rate/network/http/API-transient conditions.
