@@ -1,3 +1,9 @@
+import type {
+  JsonRpcRequestEnvelope,
+  JsonRpcResponseEnvelope,
+  UnitsUsage,
+} from "./shared/contracts.js";
+
 export type HeaderValue = string | number | boolean | null | undefined;
 export type HeaderMap = Record<string, HeaderValue>;
 
@@ -52,12 +58,7 @@ export interface SafeRequestHookEvent {
 export interface TransportMetadata {
   status: number;
   requestId?: string;
-  units?: {
-    spent?: number;
-    remaining?: number;
-    limit?: number;
-    raw: string;
-  };
+  units?: UnitsUsage;
   unitsUsedLogin?: string;
   retryIn?: number;
   reportsInQueue?: number;
@@ -123,23 +124,8 @@ export interface ReportRequestOptions extends RequestOptions {
   reportHeaders?: ReportHeaders;
 }
 
-export interface JsonRpcRequestBody {
-  method: string;
-  params?: unknown;
-}
-
-export interface YandexDirectApiErrorPayload {
-  request_id?: string;
-  error_code?: number;
-  error_string?: string;
-  error_detail?: string;
-}
-
-export interface JsonEnvelope<T = unknown> {
-  result?: T;
-  error?: YandexDirectApiErrorPayload;
-  [key: string]: unknown;
-}
+export type JsonRpcRequestBody = JsonRpcRequestEnvelope;
+export type JsonEnvelope<T = unknown> = JsonRpcResponseEnvelope<T>;
 
 export interface TransportResponse<T = unknown> {
   data: T;

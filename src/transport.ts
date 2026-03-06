@@ -7,6 +7,12 @@ import {
   toTransportError,
 } from "./errors.js";
 import { sanitizeHeaders, sanitizePayload, toHeaderRecord } from "./hooks.js";
+import {
+  ensureJsonRpcRequestEnvelope,
+  ensureNonEmptyString,
+  parseUnitsUsageHeader,
+} from "./shared/validation.js";
+import type { YandexDirectApiErrorPayload } from "./shared/contracts.js";
 import type {
   HeaderMap,
   JsonEnvelope,
@@ -18,7 +24,6 @@ import type {
   RetryPolicy,
   TransportMetadata,
   TransportResponse,
-  YandexDirectApiErrorPayload,
   YandexDirectClientConfig,
 } from "./types.js";
 
@@ -75,30 +80,12 @@ function parseNumberHeader(value: string | null): number | undefined {
   return Number.isFinite(asNumber) ? asNumber : undefined;
 }
 
-function parseUnitsHeader(value: string | null): TransportMetadata["units"] {
-  if (!value) {
-    return undefined;
-  }
-
-  const [spentRaw, remainingRaw, limitRaw] = value.split("/");
-  const spent = Number(spentRaw);
-  const remaining = Number(remainingRaw);
-  const limit = Number(limitRaw);
-
-  return {
-    raw: value,
-    spent: Number.isFinite(spent) ? spent : undefined,
-    remaining: Number.isFinite(remaining) ? remaining : undefined,
-    limit: Number.isFinite(limit) ? limit : undefined,
-  };
-}
-
 function extractMetadata(headers: Headers, status: number): TransportMetadata {
   const headerRecord = toHeaderRecord(headers);
   return {
     status,
     requestId: headers.get("RequestId") ?? undefined,
-    units: parseUnitsHeader(headers.get("Units")),
+    units: parseUnitsUsageHeader(headers.get("Units")),
     unitsUsedLogin: headers.get("Units-Used-Login") ?? undefined,
     retryIn: parseNumberHeader(headers.get("retryIn")),
     reportsInQueue: parseNumberHeader(headers.get("reportsInQueue")),
@@ -242,12 +229,15 @@ export class YandexDirectTransport {
     body: JsonRpcRequestBody,
     options: RequestOptions = {},
   ): Promise<TransportResponse<JsonEnvelope<T>>> {
+    const resolvedService = ensureNonEmptyString(service, "service");
+    const envelope = ensureJsonRpcRequestEnvelope(body);
+
     const request = await this.buildRequest({
       endpoint: "service",
-      service,
-      body,
+      service: resolvedService,
+      body: envelope,
       options,
-      url: `${this.baseUrl}/json/v5/${service}`,
+      url: `${this.baseUrl}/json/v5/${resolvedService}`,
     });
 
     return this.execute<JsonEnvelope<T>>(request);

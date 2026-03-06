@@ -1,4 +1,5 @@
-import type { TransportMetadata, YandexDirectApiErrorPayload } from "./types.js";
+import type { YandexDirectApiErrorPayload } from "./shared/contracts.js";
+import type { TransportMetadata } from "./types.js";
 
 export class SdkError extends Error {
   readonly code: string;
