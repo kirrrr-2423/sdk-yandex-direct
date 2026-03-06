@@ -1,4 +1,4 @@
-import { YandexDirectTransport } from "../src/index.js";
+import { YandexDirectTransport } from "../dist/index.js";
 
 async function main() {
   const token = process.env.YANDEX_DIRECT_TOKEN;
@@ -19,6 +19,8 @@ async function main() {
       SelectionCriteria: {},
       FieldNames: ["Id", "Name"],
     },
+  }, {
+    idempotent: true,
   });
 
   console.log("requestId:", response.metadata.requestId);

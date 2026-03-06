@@ -1,4 +1,4 @@
-import { AdGroupsService, YandexDirectTransport } from "../src/index.js";
+import { AdGroupsService, YandexDirectTransport } from "../dist/index.js";
 
 async function main() {
   const token = process.env.YANDEX_DIRECT_TOKEN;
@@ -23,7 +23,7 @@ async function main() {
 
   const ids = list.data.result.AdGroups
     .map((group) => group.Id)
-    .filter((id): id is number => typeof id === "number");
+    .filter((id) => typeof id === "number");
 
   if (ids.length > 0) {
     await adGroups.suspend({

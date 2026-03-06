@@ -21,7 +21,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build --silent && node --test tests/*.test.mjs"
+    "test": "npm run build --silent && node --test tests/*.test.mjs",
+    "test:contract": "npm run build --silent && node --test tests/contract-*.test.mjs",
+    "example:basic": "npm run build --silent && node examples/basic.mjs",
+    "example:adgroups": "npm run build --silent && node examples/adgroups-mvp.mjs",
+    "example:reports": "npm run build --silent && node examples/reports.mjs",
+    "validate": "npm run typecheck && npm test"
   },
   "keywords": [
     "yandex",

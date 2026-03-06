@@ -15,6 +15,13 @@ This package provides transport/auth primitives and typed AdGroups service metho
 npm install @k-codex/yandex-direct-sdk
 ```
 
+From this repository checkout:
+
+```bash
+npm install
+npm run build
+```
+
 ## Quick Start
 
 ```ts
@@ -38,6 +45,23 @@ const campaigns = await transport.requestService("campaigns", {
 console.log(campaigns.metadata.requestId);
 console.log(campaigns.data);
 ```
+
+## Authentication
+
+Provide either a static token or a token provider:
+
+```ts
+import { YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
+
+const transport = new YandexDirectTransport({
+  tokenProvider: async () => process.env.YANDEX_DIRECT_TOKEN ?? "",
+  clientLogin: process.env.YANDEX_DIRECT_CLIENT_LOGIN,
+});
+```
+
+Token precedence:
+1. `tokenProvider()` when defined
+2. static `token`
 
 ## AdGroupsService (MVP)
 
@@ -90,10 +114,6 @@ const config: YandexDirectClientConfig = {
 };
 ```
 
-Token precedence:
-1. `tokenProvider()` when defined
-2. static `token`
-
 ## Retry Behavior
 
 Default retries are deterministic and run only when `idempotent: true` is set per request.
@@ -137,6 +157,16 @@ console.log(report.metadata.retryIn, report.metadata.reportsInQueue);
 console.log(report.data);
 ```
 
+## Runnable Examples
+
+Set `YANDEX_DIRECT_TOKEN` and optionally `YANDEX_DIRECT_CLIENT_LOGIN`, then run:
+
+```bash
+npm run example:basic
+npm run example:adgroups
+npm run example:reports
+```
+
 ## Safe Hooks (Redacted by Default)
 
 ```ts
@@ -168,3 +198,30 @@ const transport = new YandexDirectTransport({
 - `RateLimitError`: rate-limit/quota failures (`retryable: true`)
 
 Retry logic uses exported `classifyRetryability(...)` for deterministic classification of auth/rate/network/http/API-transient conditions.
+
+## Error Handling
+
+```ts
+import { AuthError, RateLimitError, YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
+
+try {
+  const transport = new YandexDirectTransport({ token: process.env.YANDEX_DIRECT_TOKEN });
+  await transport.requestService("campaigns", { method: "get", params: {} }, { idempotent: true });
+} catch (error) {
+  if (error instanceof AuthError) {
+    console.error("Check token/client permissions:", error.requestId);
+  } else if (error instanceof RateLimitError) {
+    console.error("Retry with backoff:", error.retryReason, error.requestId);
+  } else {
+    console.error("Unhandled SDK error:", error);
+  }
+}
+```
+
+## Contributor Validation
+
+```bash
+npm run typecheck
+npm test
+npm run test:contract
+```
