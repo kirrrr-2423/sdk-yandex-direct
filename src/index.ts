@@ -1,3 +1,4 @@
+export * from "./ads/index.js";
 export * from "./client.js";
 export * from "./errors.js";
 export * from "./hooks.js";
