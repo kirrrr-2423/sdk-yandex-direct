@@ -13,15 +13,19 @@ async function main() {
     useOperatorUnits: true,
   });
 
-  const response = await transport.requestService("campaigns", {
-    method: "get",
-    params: {
-      SelectionCriteria: {},
-      FieldNames: ["Id", "Name"],
+  const response = await transport.requestService(
+    "campaigns",
+    {
+      method: "get",
+      params: {
+        SelectionCriteria: {},
+        FieldNames: ["Id", "Name"],
+      },
     },
-  }, {
-    idempotent: true,
-  });
+    {
+      idempotent: true,
+    },
+  );
 
   console.log("requestId:", response.metadata.requestId);
   console.log("units:", response.metadata.units);

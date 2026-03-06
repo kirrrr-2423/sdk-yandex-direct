@@ -1,11 +1,12 @@
-# Yandex Direct SDK (Core Transport/Auth)
+# Yandex Direct SDK
 
-This package provides transport/auth primitives and typed AdGroups service methods for Yandex Direct API v5:
+This package provides transport/auth primitives and typed Campaigns + AdGroups service methods for Yandex Direct API v5:
 
 - JSON service endpoint: `/json/v5/{service}`
 - Reports endpoint: `/json/v5/reports`
 - AdGroups service MVP: `get`, `add`, `update`, `suspend`, `resume`
 - Typed client config and request options
+- Public client with Campaigns MVP methods: `get`, `add`, `update`, `suspend`, `resume`
 - Deterministic timeout + retry defaults with idempotent-safe guard
 - Safe request/response hooks with secret redaction by default
 
@@ -25,25 +26,48 @@ npm run build
 ## Quick Start
 
 ```ts
-import { YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
+import { YandexDirectClient } from "@k-codex/yandex-direct-sdk";
 
-const transport = new YandexDirectTransport({
+const client = new YandexDirectClient({
   token: process.env.YANDEX_DIRECT_TOKEN,
   language: "en",
   clientLogin: process.env.YANDEX_DIRECT_CLIENT_LOGIN,
   useOperatorUnits: true,
 });
 
-const campaigns = await transport.requestService("campaigns", {
-  method: "get",
-  params: {
-    SelectionCriteria: {},
-    FieldNames: ["Id", "Name"],
-  },
+const campaigns = await client.campaigns.get({
+  SelectionCriteria: { Ids: [12345] },
+  FieldNames: ["Id", "Name", "State"],
 });
 
 console.log(campaigns.metadata.requestId);
-console.log(campaigns.data);
+console.log(campaigns.data.result.Campaigns);
+```
+
+## Campaigns MVP Methods
+
+```ts
+await client.campaigns.add({
+  Campaigns: [
+    {
+      Name: "Spring sale",
+      StartDate: "2026-03-07",
+      TextCampaign: { BiddingStrategy: { Search: { BiddingStrategyType: "HIGHEST_POSITION" } } },
+    },
+  ],
+});
+
+await client.campaigns.update({
+  Campaigns: [
+    {
+      Id: 12345,
+      Name: "Spring sale updated",
+    },
+  ],
+});
+
+await client.campaigns.suspend({ SelectionCriteria: { Ids: [12345] } });
+await client.campaigns.resume({ SelectionCriteria: { Ids: [12345] } });
 ```
 
 ## Authentication
@@ -121,9 +145,9 @@ Default retries are deterministic and run only when `idempotent: true` is set pe
 Transient retry conditions include timeout/network failures and HTTP `408/425/429/500/502/503/504`.
 
 ```ts
-await transport.requestService(
+await client.transport.requestService(
   "campaigns",
-  { method: "get", params: {} },
+  { method: "get", params: { FieldNames: ["Id"] } },
   { idempotent: true },
 );
 ```
