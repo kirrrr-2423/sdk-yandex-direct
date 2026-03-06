@@ -17,6 +17,7 @@ import type {
   HeaderMap,
   JsonEnvelope,
   JsonRpcRequestBody,
+  ReportExecutionState,
   ReportHeaders,
   ReportRequestOptions,
   RequestOptions,
@@ -80,9 +81,26 @@ function parseNumberHeader(value: string | null): number | undefined {
   return Number.isFinite(asNumber) ? asNumber : undefined;
 }
 
-function extractMetadata(headers: Headers, status: number): TransportMetadata {
+function resolveReportState(status: number): ReportExecutionState | undefined {
+  if (status === 200) {
+    return "completed";
+  }
+  if (status === 201) {
+    return "queued";
+  }
+  if (status === 202) {
+    return "in-progress";
+  }
+  return undefined;
+}
+
+function extractMetadata(
+  endpoint: "service" | "reports",
+  headers: Headers,
+  status: number,
+): TransportMetadata {
   const headerRecord = toHeaderRecord(headers);
-  return {
+  const metadata: TransportMetadata = {
     status,
     requestId: headers.get("RequestId") ?? undefined,
     units: parseUnitsUsageHeader(headers.get("Units")),
@@ -91,6 +109,20 @@ function extractMetadata(headers: Headers, status: number): TransportMetadata {
     reportsInQueue: parseNumberHeader(headers.get("reportsInQueue")),
     headers: headerRecord,
   };
+
+  if (endpoint === "reports") {
+    const reportState = resolveReportState(status);
+    if (reportState) {
+      metadata.reportState = reportState;
+      metadata.polling = {
+        shouldPoll: reportState !== "completed",
+        retryInSeconds: metadata.retryIn,
+        reportsInQueue: metadata.reportsInQueue,
+      };
+    }
+  }
+
+  return metadata;
 }
 
 function isAbortError(error: unknown): boolean {
@@ -291,7 +323,7 @@ export class YandexDirectTransport {
           body: JSON.stringify(request.body),
           signal: controller.signal,
         });
-        metadata = extractMetadata(response.headers, response.status);
+        metadata = extractMetadata(request.endpoint, response.headers, response.status);
 
         const parsed = await parseBody(request.endpoint, response);
         const apiError = extractApiError(parsed);
@@ -466,6 +498,9 @@ export class YandexDirectTransport {
     }
     if (typeof reportHeaders.skipReportSummary === "boolean") {
       headers.skipReportSummary = reportHeaders.skipReportSummary ? "true" : "false";
+    }
+    if (reportHeaders.acceptEncoding) {
+      headers["Accept-Encoding"] = reportHeaders.acceptEncoding;
     }
   }
 

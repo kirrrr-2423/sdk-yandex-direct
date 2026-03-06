@@ -62,6 +62,8 @@ export interface TransportMetadata {
   unitsUsedLogin?: string;
   retryIn?: number;
   reportsInQueue?: number;
+  reportState?: ReportExecutionState;
+  polling?: ReportPollingHints;
   headers: Record<string, string>;
 }
 
@@ -112,12 +114,27 @@ export interface RequestOptions {
   metadata?: RequestMetadata;
 }
 
+export type ReportExecutionState = "completed" | "queued" | "in-progress";
+
+export interface ReportPollingHints {
+  shouldPoll: boolean;
+  retryInSeconds?: number;
+  reportsInQueue?: number;
+}
+
+export type ReportProcessingMode = "auto" | "online" | "offline";
+
+/**
+ * Reports endpoint specific header options for `/json/v5/reports`.
+ * See Yandex Direct reports headers docs for details.
+ */
 export interface ReportHeaders {
-  processingMode?: "auto" | "online" | "offline";
+  processingMode?: ReportProcessingMode;
   returnMoneyInMicros?: boolean;
   skipReportHeader?: boolean;
   skipColumnHeader?: boolean;
   skipReportSummary?: boolean;
+  acceptEncoding?: string;
 }
 
 export interface ReportRequestOptions extends RequestOptions {

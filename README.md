@@ -1,10 +1,11 @@
 # Yandex Direct SDK (Core Transport/Auth)
 
-This package provides transport/auth primitives and typed AdGroups service methods for Yandex Direct API v5:
+This package provides transport/auth primitives and typed service methods for Yandex Direct API v5:
 
 - JSON service endpoint: `/json/v5/{service}`
 - Reports endpoint: `/json/v5/reports`
 - AdGroups service MVP: `get`, `add`, `update`, `suspend`, `resume`
+- Reports service MVP: `create` with deterministic `completed` / `queued` / `in-progress` states
 - Typed client config and request options
 - Deterministic timeout + retry defaults with idempotent-safe guard
 - Safe request/response hooks with secret redaction by default
@@ -108,24 +109,29 @@ await transport.requestService(
 );
 ```
 
-## Reports Example
+## ReportsService (MVP)
 
 ```ts
-const report = await transport.requestReport(
+import { ReportsService, YandexDirectTransport, isReportPending } from "@k-codex/yandex-direct-sdk";
+
+const reports = new ReportsService(new YandexDirectTransport({
+  token: process.env.YANDEX_DIRECT_TOKEN,
+}));
+
+const report = await reports.create(
   {
-    params: {
-      SelectionCriteria: {},
-      FieldNames: ["Date", "Clicks"],
-      ReportName: "Daily clicks",
-      ReportType: "ACCOUNT_PERFORMANCE_REPORT",
-      DateRangeType: "TODAY",
-      Format: "TSV",
-    },
+    SelectionCriteria: {},
+    FieldNames: ["Date", "Clicks"],
+    ReportName: "Daily clicks",
+    ReportType: "ACCOUNT_PERFORMANCE_REPORT",
+    DateRangeType: "TODAY",
+    Format: "TSV",
+    IncludeVAT: "NO",
   },
   {
-    idempotent: true,
     reportHeaders: {
       processingMode: "auto",
+      acceptEncoding: "gzip",
       skipReportHeader: true,
       skipColumnHeader: true,
       skipReportSummary: true,
@@ -133,9 +139,30 @@ const report = await transport.requestReport(
   },
 );
 
-console.log(report.metadata.retryIn, report.metadata.reportsInQueue);
-console.log(report.data);
+if (isReportPending(report)) {
+  console.log("retryIn:", report.retryInSeconds, "queue:", report.reportsInQueue);
+  // poll again after retryInSeconds
+} else {
+  console.log(report.report);
+}
 ```
+
+Required report request fields:
+- `SelectionCriteria`
+- `FieldNames`
+- `ReportName`
+- `ReportType`
+- `DateRangeType`
+- `Format` (`TSV`)
+- `IncludeVAT` (`YES` or `NO`)
+
+Reports request options headers:
+- `processingMode`: `auto`, `online`, or `offline`
+- `returnMoneyInMicros`
+- `skipReportHeader`
+- `skipColumnHeader`
+- `skipReportSummary`
+- `acceptEncoding` (`Accept-Encoding` header, usually `gzip`)
 
 ## Safe Hooks (Redacted by Default)
 

@@ -163,7 +163,34 @@ test("requestReport applies report headers and exposes queue metadata", async ()
   assert.equal(requestHeaders.get("skipreportheader"), "true");
   assert.equal(response.metadata.retryIn, 5);
   assert.equal(response.metadata.reportsInQueue, 2);
+  assert.equal(response.metadata.reportState, "completed");
+  assert.equal(response.metadata.polling?.shouldPoll, false);
   assert.match(response.data, /Clicks/);
+});
+
+test("requestReport maps in-progress response metadata for polling", async () => {
+  const transport = new YandexDirectTransport({
+    token: "token",
+    fetch: async () => new Response("Report is being generated", {
+      status: 202,
+      headers: {
+        "content-type": "text/plain",
+        retryIn: "30",
+        reportsInQueue: "4",
+      },
+    }),
+  });
+
+  const response = await transport.requestReport(
+    { params: { DateRangeType: "TODAY" } },
+    { idempotent: true },
+  );
+
+  assert.equal(response.metadata.reportState, "in-progress");
+  assert.equal(response.metadata.polling?.shouldPoll, true);
+  assert.equal(response.metadata.polling?.retryInSeconds, 30);
+  assert.equal(response.metadata.polling?.reportsInQueue, 4);
+  assert.match(response.data, /being generated/);
 });
 
 test("API auth failures map to AuthError", async () => {
@@ -184,6 +211,32 @@ test("API auth failures map to AuthError", async () => {
     (error) => {
       assert.ok(error instanceof AuthError);
       assert.equal(error.requestId, "abc");
+      return true;
+    },
+  );
+});
+
+test("requestReport maps JSON error envelopes to AuthError", async () => {
+  const transport = new YandexDirectTransport({
+    token: "token",
+    fetch: async () => jsonResponse({
+      error: {
+        request_id: "report-auth",
+        error_code: 53,
+        error_string: "Authorization error",
+        error_detail: "Token is invalid",
+      },
+    }, { status: 401 }),
+  });
+
+  await assert.rejects(
+    () => transport.requestReport(
+      { params: { DateRangeType: "TODAY" } },
+      { idempotent: true },
+    ),
+    (error) => {
+      assert.ok(error instanceof AuthError);
+      assert.equal(error.requestId, "report-auth");
       return true;
     },
   );
