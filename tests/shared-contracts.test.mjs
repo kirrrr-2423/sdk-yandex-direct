@@ -15,6 +15,7 @@ test("root exports shared runtime boundaries", () => {
   assert.equal(typeof sdk.ensureJsonRpcRequestEnvelope, "function");
   assert.equal(typeof sdk.ensureIds, "function");
   assert.equal(typeof sdk.ensurePaginationPage, "function");
+  assert.equal(typeof sdk.AdGroupsService, "function");
 });
 
 test("ensureJsonRpcRequestEnvelope accepts valid envelope", () => {

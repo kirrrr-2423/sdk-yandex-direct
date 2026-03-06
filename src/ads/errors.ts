@@ -16,8 +16,10 @@ export class UnsupportedAdFormatError extends SdkError {
     super(
       options.message
       ?? `Unsupported ad format in Ads service: ${options.receivedFormat ?? "unknown format"}. Supported formats: ${SUPPORTED_AD_FORMAT_KEYS.join(", ")}.`,
-      "UNSUPPORTED_AD_FORMAT",
-      false,
+      {
+        code: "UNSUPPORTED_AD_FORMAT",
+        retryable: false,
+      },
     );
     this.reason = options.reason;
     this.receivedFormat = options.receivedFormat;
