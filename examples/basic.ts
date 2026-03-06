@@ -1,4 +1,4 @@
-import { YandexDirectTransport } from "../src/index.js";
+import { YandexDirectClient } from "../src/index.js";
 
 async function main() {
   const token = process.env.YANDEX_DIRECT_TOKEN;
@@ -6,24 +6,21 @@ async function main() {
     throw new Error("YANDEX_DIRECT_TOKEN is required");
   }
 
-  const transport = new YandexDirectTransport({
+  const client = new YandexDirectClient({
     token,
     language: "en",
     clientLogin: process.env.YANDEX_DIRECT_CLIENT_LOGIN,
     useOperatorUnits: true,
   });
 
-  const response = await transport.requestService("campaigns", {
-    method: "get",
-    params: {
-      SelectionCriteria: {},
-      FieldNames: ["Id", "Name"],
-    },
+  const response = await client.campaigns.get({
+    SelectionCriteria: {},
+    FieldNames: ["Id", "Name"],
   });
 
   console.log("requestId:", response.metadata.requestId);
   console.log("units:", response.metadata.units);
-  console.log("payload:", response.data);
+  console.log("campaigns:", response.data.result.Campaigns);
 }
 
 main().catch((error) => {
