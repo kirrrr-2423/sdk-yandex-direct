@@ -1,9 +1,10 @@
 # Yandex Direct SDK (Core Transport/Auth)
 
-This package provides transport and auth primitives for Yandex Direct API v5:
+This package provides transport/auth primitives and typed AdGroups service methods for Yandex Direct API v5:
 
 - JSON service endpoint: `/json/v5/{service}`
 - Reports endpoint: `/json/v5/reports`
+- AdGroups service MVP: `get`, `add`, `update`, `suspend`, `resume`
 - Typed client config and request options
 - Deterministic timeout + retry defaults with idempotent-safe guard
 - Safe request/response hooks with secret redaction by default
@@ -36,6 +37,35 @@ const campaigns = await transport.requestService("campaigns", {
 
 console.log(campaigns.metadata.requestId);
 console.log(campaigns.data);
+```
+
+## AdGroupsService (MVP)
+
+```ts
+import { AdGroupsService, YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
+
+const transport = new YandexDirectTransport({
+  token: process.env.YANDEX_DIRECT_TOKEN,
+});
+
+const adGroups = new AdGroupsService(transport);
+
+const getResponse = await adGroups.get({
+  SelectionCriteria: { CampaignIds: [12345] },
+  FieldNames: ["Id", "Name", "CampaignId", "Status"],
+});
+
+await adGroups.suspend({
+  SelectionCriteria: {
+    Ids: getResponse.data.result.AdGroups.map((group) => group.Id).filter(Boolean),
+  },
+});
+
+await adGroups.resume({
+  SelectionCriteria: {
+    Ids: [111, 222],
+  },
+});
 ```
 
 ## Config
