@@ -1,10 +1,11 @@
 # Yandex Direct SDK (Core Transport/Auth)
 
-This package provides transport/auth primitives and typed AdGroups service methods for Yandex Direct API v5:
+This package provides transport/auth primitives and typed service methods for Yandex Direct API v5:
 
 - JSON service endpoint: `/json/v5/{service}`
 - Reports endpoint: `/json/v5/reports`
 - AdGroups service MVP: `get`, `add`, `update`, `suspend`, `resume`
+- Keywords service MVP: `get`, `add`, `update`, `suspend`, `resume`
 - Typed client config and request options
 - Deterministic timeout + retry defaults with idempotent-safe guard
 - Safe request/response hooks with secret redaction by default
@@ -65,6 +66,37 @@ await adGroups.resume({
   SelectionCriteria: {
     Ids: [111, 222],
   },
+});
+```
+
+## KeywordsService (MVP)
+
+```ts
+import { KeywordsService, YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
+
+const transport = new YandexDirectTransport({
+  token: process.env.YANDEX_DIRECT_TOKEN,
+});
+
+const keywords = new KeywordsService(transport);
+
+const list = await keywords.get({
+  SelectionCriteria: { AdGroupIds: [12345] },
+  FieldNames: ["Id", "Keyword", "Bid", "ContextBid", "MinSearchPrice", "CurrentSearchPrice"],
+});
+
+const keywordId = list.data.result.Keywords[0]?.Id;
+if (typeof keywordId !== "number") {
+  throw new Error("No keyword id returned");
+}
+
+await keywords.update({
+  Keywords: [{
+    Id: keywordId,
+    Bid: 1400000,
+    ContextBid: 900000,
+    StrategyPriority: "HIGH",
+  }],
 });
 ```
 
