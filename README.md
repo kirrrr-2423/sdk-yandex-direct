@@ -5,6 +5,7 @@ This package provides transport/auth primitives and typed AdGroups service metho
 - JSON service endpoint: `/json/v5/{service}`
 - Reports endpoint: `/json/v5/reports`
 - AdGroups service MVP: `get`, `add`, `update`, `suspend`, `resume`
+- Dictionaries service: typed `get` with optional cache hooks for static reference data
 - Typed client config and request options
 - Deterministic timeout + retry defaults with idempotent-safe guard
 - Safe request/response hooks with secret redaction by default
@@ -66,6 +67,35 @@ await adGroups.resume({
     Ids: [111, 222],
   },
 });
+```
+
+## DictionariesService (Reference Data)
+
+```ts
+import { DictionariesService, YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
+
+const transport = new YandexDirectTransport({
+  token: process.env.YANDEX_DIRECT_TOKEN,
+});
+
+const dictionaries = new DictionariesService(transport, {
+  cacheStrategy: {
+    async get(name) {
+      return inMemoryCache.get(name);
+    },
+    async set(name, entries) {
+      inMemoryCache.set(name, entries);
+    },
+  },
+});
+
+const response = await dictionaries.get(
+  { DictionaryNames: ["TimeZones", "Constants"] },
+  { useCache: true },
+);
+
+console.log(response.data.result.TimeZones[0].UtcOffset);
+console.log(response.data.result.Constants[0].Name);
 ```
 
 ## Config
