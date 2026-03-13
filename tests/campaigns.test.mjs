@@ -17,20 +17,25 @@ function jsonResponse(body, init = {}) {
   });
 }
 
-test("public client exposes CampaignsService MVP methods", () => {
+test("public client exposes campaigns, ads, and adGroups services", () => {
   const client = new YandexDirectClient({
     token: "token",
     fetch: async () => jsonResponse({ result: {} }),
   });
 
+  assert.equal(typeof client.ads.get, "function");
+  assert.equal(typeof client.adGroups.get, "function");
   assert.equal(typeof client.campaigns.get, "function");
   assert.equal(typeof client.campaigns.add, "function");
   assert.equal(typeof client.campaigns.update, "function");
+  assert.equal(typeof client.campaigns.delete, "function");
   assert.equal(typeof client.campaigns.suspend, "function");
   assert.equal(typeof client.campaigns.resume, "function");
+  assert.equal(typeof client.campaigns.archive, "function");
+  assert.equal(typeof client.campaigns.unarchive, "function");
 });
 
-test("CampaignsService methods return typed envelopes for all MVP operations", async () => {
+test("CampaignsService methods return typed envelopes for all supported operations", async () => {
   const seenMethods = [];
 
   const client = new YandexDirectClient({
@@ -46,10 +51,16 @@ test("CampaignsService methods return typed envelopes for all MVP operations", a
           return jsonResponse({ result: { AddResults: [{ Id: 1 }] } });
         case "update":
           return jsonResponse({ result: { UpdateResults: [{ Id: 1 }] } });
+        case "delete":
+          return jsonResponse({ result: { DeleteResults: [{ Id: 1 }] } });
         case "suspend":
           return jsonResponse({ result: { SuspendResults: [{ Id: 1 }] } });
         case "resume":
           return jsonResponse({ result: { ResumeResults: [{ Id: 1 }] } });
+        case "archive":
+          return jsonResponse({ result: { ArchiveResults: [{ Id: 1 }] } });
+        case "unarchive":
+          return jsonResponse({ result: { UnarchiveResults: [{ Id: 1 }] } });
         default:
           throw new Error(`Unexpected method: ${body.method}`);
       }
@@ -74,18 +85,27 @@ test("CampaignsService methods return typed envelopes for all MVP operations", a
       },
     ],
   });
+  const deleteResult = await client.campaigns.delete({ SelectionCriteria: { Ids: [1] } });
   const suspendResult = await client.campaigns.suspend({ SelectionCriteria: { Ids: [1] } });
   const resumeResult = await client.campaigns.resume({ SelectionCriteria: { Ids: [1] } });
+  const archiveResult = await client.campaigns.archive({ SelectionCriteria: { Ids: [1] } });
+  const unarchiveResult = await client.campaigns.unarchive({ SelectionCriteria: { Ids: [1] } });
 
-  assert.deepEqual(seenMethods, ["get", "add", "update", "suspend", "resume"]);
+  assert.deepEqual(
+    seenMethods,
+    ["get", "add", "update", "delete", "suspend", "resume", "archive", "unarchive"],
+  );
   assert.equal(getResult.data.result.Campaigns[0].Id, 1);
   assert.equal(addResult.data.result.AddResults[0].Id, 1);
   assert.equal(updateResult.data.result.UpdateResults[0].Id, 1);
+  assert.equal(deleteResult.data.result.DeleteResults[0].Id, 1);
   assert.equal(suspendResult.data.result.SuspendResults[0].Id, 1);
   assert.equal(resumeResult.data.result.ResumeResults[0].Id, 1);
+  assert.equal(archiveResult.data.result.ArchiveResults[0].Id, 1);
+  assert.equal(unarchiveResult.data.result.UnarchiveResults[0].Id, 1);
 });
 
-test("required params are validated for get/add/update/suspend/resume", async () => {
+test("required params are validated for get/add/update/delete/suspend/resume/archive/unarchive", async () => {
   const client = new YandexDirectClient({
     token: "token",
     fetch: async () => jsonResponse({ result: {} }),
@@ -117,6 +137,21 @@ test("required params are validated for get/add/update/suspend/resume", async ()
     () => client.campaigns.resume({ SelectionCriteria: { Ids: [0] } }),
     /positive integer/,
   );
+
+  await assert.rejects(
+    () => client.campaigns.delete({ SelectionCriteria: { Ids: [] } }),
+    /params\.SelectionCriteria\.Ids must include at least one id/,
+  );
+
+  await assert.rejects(
+    () => client.campaigns.archive({ SelectionCriteria: { Ids: [0] } }),
+    /positive integer/,
+  );
+
+  await assert.rejects(
+    () => client.campaigns.unarchive({ SelectionCriteria: { Ids: [] } }),
+    /params\.SelectionCriteria\.Ids must include at least one id/,
+  );
 });
 
 test("method-level API auth error mapping is preserved", async () => {
@@ -138,8 +173,11 @@ test("method-level API auth error mapping is preserved", async () => {
       Campaigns: [{ Name: "A", StartDate: "2026-03-06", TextCampaign: {} }],
     }),
     () => client.campaigns.update({ Campaigns: [{ Id: 1 }] }),
+    () => client.campaigns.delete({ SelectionCriteria: { Ids: [1] } }),
     () => client.campaigns.suspend({ SelectionCriteria: { Ids: [1] } }),
     () => client.campaigns.resume({ SelectionCriteria: { Ids: [1] } }),
+    () => client.campaigns.archive({ SelectionCriteria: { Ids: [1] } }),
+    () => client.campaigns.unarchive({ SelectionCriteria: { Ids: [1] } }),
   ];
 
   for (const run of checks) {

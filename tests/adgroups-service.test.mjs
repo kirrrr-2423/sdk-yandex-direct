@@ -53,7 +53,7 @@ test("AdGroupsService.get validates params and retries as idempotent by default"
   assert.deepEqual(response.data.result.AdGroups, [{ Id: 1, Name: "Main group" }]);
 });
 
-test("AdGroupsService methods map to get/add/update/suspend/resume envelopes", async () => {
+test("AdGroupsService methods map to add/update/suspend/resume/delete envelopes", async () => {
   const calledMethods = [];
 
   const transport = new YandexDirectTransport({
@@ -71,6 +71,8 @@ test("AdGroupsService methods map to get/add/update/suspend/resume envelopes", a
           return jsonResponse({ result: { SuspendResults: [{ Id: 101 }] } });
         case "resume":
           return jsonResponse({ result: { ResumeResults: [{ Id: 101 }] } });
+        case "delete":
+          return jsonResponse({ result: { DeleteResults: [{ Id: 101 }] } });
         default:
           throw new Error(`Unexpected method: ${parsedBody.method}`);
       }
@@ -102,12 +104,18 @@ test("AdGroupsService methods map to get/add/update/suspend/resume envelopes", a
       Ids: [101],
     },
   });
+  const deleted = await service.delete({
+    SelectionCriteria: {
+      Ids: [101],
+    },
+  });
 
   assert.deepEqual(add.data.result.AddResults, [{ Id: 101 }]);
   assert.deepEqual(update.data.result.UpdateResults, [{ Id: 101 }]);
   assert.deepEqual(suspend.data.result.SuspendResults, [{ Id: 101 }]);
   assert.deepEqual(resume.data.result.ResumeResults, [{ Id: 101 }]);
-  assert.deepEqual(calledMethods, ["add", "update", "suspend", "resume"]);
+  assert.deepEqual(deleted.data.result.DeleteResults, [{ Id: 101 }]);
+  assert.deepEqual(calledMethods, ["add", "update", "suspend", "resume", "delete"]);
 });
 
 test("AdGroupsService enforces required params for selector/entity/ids payloads", async () => {
@@ -143,6 +151,15 @@ test("AdGroupsService enforces required params for selector/entity/ids payloads"
       },
     }),
     /at least one ID/,
+  );
+
+  await assert.rejects(
+    () => service.delete({
+      SelectionCriteria: {
+        Ids: [0],
+      },
+    }),
+    /positive integer/,
   );
 });
 

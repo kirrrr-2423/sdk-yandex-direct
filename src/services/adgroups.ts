@@ -1,5 +1,6 @@
 import type {
   AddMutationResult,
+  DeleteMutationResult,
   JsonRpcRequestEnvelope,
   PaginationPage,
   SelectionCriteriaBase,
@@ -109,6 +110,10 @@ export interface AdGroupsStateRequest {
   SelectionCriteria: AdGroupsStateSelectionCriteria;
 }
 
+export interface AdGroupsDeleteRequest {
+  SelectionCriteria: AdGroupsStateSelectionCriteria;
+}
+
 export interface AdGroupGetItem {
   Id?: YandexDirectId;
   Name?: string;
@@ -129,6 +134,7 @@ export interface AdGroupsGetResult {
 }
 
 export type AdGroupsAddResult = AddMutationResult;
+export type AdGroupsDeleteResult = DeleteMutationResult;
 export type AdGroupsUpdateResult = UpdateMutationResult;
 export type AdGroupsSuspendResult = StateTransitionMutationResult<"SuspendResults">;
 export type AdGroupsResumeResult = StateTransitionMutationResult<"ResumeResults">;
@@ -468,6 +474,22 @@ export class AdGroupsService {
       params: validated,
     };
     return this.transport.requestService<AdGroupsResumeResult>(
+      ADGROUPS_SERVICE,
+      body,
+      applyIdempotency(options, true),
+    );
+  }
+
+  async delete(
+    params: AdGroupsDeleteRequest,
+    options: RequestOptions = {},
+  ): Promise<TransportResponse<JsonEnvelope<AdGroupsDeleteResult>>> {
+    const validated = ensureStateRequest(params);
+    const body: JsonRpcRequestEnvelope<"delete", AdGroupsDeleteRequest> = {
+      method: "delete",
+      params: validated,
+    };
+    return this.transport.requestService<AdGroupsDeleteResult>(
       ADGROUPS_SERVICE,
       body,
       applyIdempotency(options, true),

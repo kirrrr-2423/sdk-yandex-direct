@@ -1,5 +1,6 @@
 import type {
   AddMutationResult,
+  DeleteMutationResult,
   FieldNames,
   GetMethodParams,
   MutationItemResult,
@@ -194,4 +195,34 @@ export interface AdsResumeRequest {
 
 export interface AdsResumeResult {
   ResumeResults: MutationItemResult[];
+}
+
+export interface AdsDeleteRequest {
+  SelectionCriteria: AdsSelectionCriteria;
+}
+
+export type AdsDeleteResult = DeleteMutationResult;
+
+export interface AdsArchiveRequest {
+  SelectionCriteria: AdsSelectionCriteria;
+}
+
+export interface AdsArchiveResult {
+  ArchiveResults: MutationItemResult[];
+}
+
+export interface AdsUnarchiveRequest {
+  SelectionCriteria: AdsSelectionCriteria;
+}
+
+export interface AdsUnarchiveResult {
+  UnarchiveResults: MutationItemResult[];
+}
+
+export interface AdsModerateRequest {
+  SelectionCriteria: AdsSelectionCriteria;
+}
+
+export interface AdsModerateResult {
+  ModerateResults: MutationItemResult[];
 }

@@ -1,5 +1,6 @@
 import type {
   AddMutationResult,
+  DeleteMutationResult,
   FieldNames,
   GetMethodParams,
   SelectionCriteriaBase,
@@ -142,7 +143,22 @@ export interface CampaignsResumeRequest {
   SelectionCriteria: CampaignsStateSelectionCriteria;
 }
 
+export interface CampaignsDeleteRequest {
+  SelectionCriteria: CampaignsStateSelectionCriteria;
+}
+
+export interface CampaignsArchiveRequest {
+  SelectionCriteria: CampaignsStateSelectionCriteria;
+}
+
+export interface CampaignsUnarchiveRequest {
+  SelectionCriteria: CampaignsStateSelectionCriteria;
+}
+
 export type CampaignsAddResult = AddMutationResult;
+export type CampaignsDeleteResult = DeleteMutationResult;
 export type CampaignsUpdateResult = UpdateMutationResult;
 export type CampaignsSuspendResult = StateTransitionMutationResult<"SuspendResults">;
 export type CampaignsResumeResult = StateTransitionMutationResult<"ResumeResults">;
+export type CampaignsArchiveResult = StateTransitionMutationResult<"ArchiveResults">;
+export type CampaignsUnarchiveResult = StateTransitionMutationResult<"UnarchiveResults">;

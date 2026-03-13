@@ -1,12 +1,13 @@
 # Yandex Direct SDK
 
-This package provides transport/auth primitives and typed Campaigns + AdGroups service methods for Yandex Direct API v5:
+This package provides transport/auth primitives and typed Campaigns + AdGroups + Ads service methods for Yandex Direct API v5:
 
 - JSON service endpoint: `/json/v5/{service}`
 - Reports endpoint: `/json/v5/reports`
-- AdGroups service MVP: `get`, `add`, `update`, `suspend`, `resume`
+- Ads service methods: `get`, `add`, `update`, `delete`, `suspend`, `resume`, `archive`, `unarchive`, `moderate`
+- AdGroups service methods: `get`, `add`, `update`, `delete`, `suspend`, `resume`
 - Typed client config and request options
-- Public client with Campaigns MVP methods: `get`, `add`, `update`, `suspend`, `resume`
+- Public client with Campaigns methods: `get`, `add`, `update`, `delete`, `suspend`, `resume`, `archive`, `unarchive`
 - Deterministic timeout + retry defaults with idempotent-safe guard
 - Safe request/response hooks with secret redaction by default
 
@@ -44,7 +45,7 @@ console.log(campaigns.metadata.requestId);
 console.log(campaigns.data.result.Campaigns);
 ```
 
-## Campaigns MVP Methods
+## Campaigns Methods
 
 ```ts
 await client.campaigns.add({
@@ -66,8 +67,11 @@ await client.campaigns.update({
   ],
 });
 
+await client.campaigns.delete({ SelectionCriteria: { Ids: [12345] } });
 await client.campaigns.suspend({ SelectionCriteria: { Ids: [12345] } });
 await client.campaigns.resume({ SelectionCriteria: { Ids: [12345] } });
+await client.campaigns.archive({ SelectionCriteria: { Ids: [12345] } });
+await client.campaigns.unarchive({ SelectionCriteria: { Ids: [12345] } });
 ```
 
 ## Authentication
@@ -87,7 +91,30 @@ Token precedence:
 1. `tokenProvider()` when defined
 2. static `token`
 
-## AdGroupsService (MVP)
+## Public Client Services
+
+```ts
+const ads = await client.ads.get({
+  SelectionCriteria: { Ids: [10] },
+  FieldNames: ["Id", "Type"],
+  TextAdFieldNames: ["Title", "Text"],
+});
+
+await client.ads.archive({ SelectionCriteria: { Ids: [10] } });
+
+const groups = await client.adGroups.get({
+  SelectionCriteria: { CampaignIds: [12345] },
+  FieldNames: ["Id", "Name", "CampaignId", "Status"],
+});
+
+await client.adGroups.delete({
+  SelectionCriteria: {
+    Ids: groups.data.result.AdGroups.map((group) => group.Id).filter(Boolean),
+  },
+});
+```
+
+## AdGroupsService
 
 ```ts
 import { AdGroupsService, YandexDirectTransport } from "@k-codex/yandex-direct-sdk";
@@ -110,6 +137,12 @@ await adGroups.suspend({
 });
 
 await adGroups.resume({
+  SelectionCriteria: {
+    Ids: [111, 222],
+  },
+});
+
+await adGroups.delete({
   SelectionCriteria: {
     Ids: [111, 222],
   },

@@ -87,6 +87,10 @@ export interface AddMutationResult<TId extends YandexDirectId = YandexDirectId> 
   AddResults: MutationItemResult<TId>[];
 }
 
+export interface DeleteMutationResult<TId extends YandexDirectId = YandexDirectId> {
+  DeleteResults: MutationItemResult<TId>[];
+}
+
 export interface UpdateMutationResult<TId extends YandexDirectId = YandexDirectId> {
   UpdateResults: MutationItemResult<TId>[];
 }

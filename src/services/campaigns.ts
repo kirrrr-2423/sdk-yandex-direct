@@ -10,12 +10,18 @@ import type {
   CampaignAddOperation,
   CampaignsAddRequest,
   CampaignsAddResult,
+  CampaignsArchiveRequest,
+  CampaignsArchiveResult,
+  CampaignsDeleteRequest,
+  CampaignsDeleteResult,
   CampaignsGetRequest,
   CampaignsGetResult,
   CampaignsResumeRequest,
   CampaignsResumeResult,
   CampaignsSuspendRequest,
   CampaignsSuspendResult,
+  CampaignsUnarchiveRequest,
+  CampaignsUnarchiveResult,
   CampaignsUpdateRequest,
   CampaignsUpdateResult,
   CampaignUpdateOperation,
@@ -148,8 +154,18 @@ function validateUpdateRequest(input: CampaignsUpdateRequest): CampaignsUpdateRe
 }
 
 function validateStateRequest(
-  input: CampaignsSuspendRequest | CampaignsResumeRequest,
-): CampaignsSuspendRequest | CampaignsResumeRequest {
+  input:
+    | CampaignsSuspendRequest
+    | CampaignsResumeRequest
+    | CampaignsDeleteRequest
+    | CampaignsArchiveRequest
+    | CampaignsUnarchiveRequest,
+):
+  | CampaignsSuspendRequest
+  | CampaignsResumeRequest
+  | CampaignsDeleteRequest
+  | CampaignsArchiveRequest
+  | CampaignsUnarchiveRequest {
   const request = asRecord(input, "params");
   const selection = asRecord(request.SelectionCriteria, "params.SelectionCriteria");
   const ids = ensureIds(selection.Ids, "params.SelectionCriteria.Ids");
@@ -250,6 +266,51 @@ export class CampaignsService {
       "campaigns",
       {
         method: "resume",
+        params: validated,
+      },
+      withDefaultIdempotent(options, true),
+    );
+  }
+
+  async delete(
+    params: CampaignsDeleteRequest,
+    options?: RequestOptions,
+  ): Promise<TransportResponse<JsonEnvelope<CampaignsDeleteResult>>> {
+    const validated = validateStateRequest(params) as CampaignsDeleteRequest;
+    return this.transport.requestService<CampaignsDeleteResult>(
+      "campaigns",
+      {
+        method: "delete",
+        params: validated,
+      },
+      withDefaultIdempotent(options, true),
+    );
+  }
+
+  async archive(
+    params: CampaignsArchiveRequest,
+    options?: RequestOptions,
+  ): Promise<TransportResponse<JsonEnvelope<CampaignsArchiveResult>>> {
+    const validated = validateStateRequest(params) as CampaignsArchiveRequest;
+    return this.transport.requestService<CampaignsArchiveResult>(
+      "campaigns",
+      {
+        method: "archive",
+        params: validated,
+      },
+      withDefaultIdempotent(options, true),
+    );
+  }
+
+  async unarchive(
+    params: CampaignsUnarchiveRequest,
+    options?: RequestOptions,
+  ): Promise<TransportResponse<JsonEnvelope<CampaignsUnarchiveResult>>> {
+    const validated = validateStateRequest(params) as CampaignsUnarchiveRequest;
+    return this.transport.requestService<CampaignsUnarchiveResult>(
+      "campaigns",
+      {
+        method: "unarchive",
         params: validated,
       },
       withDefaultIdempotent(options, true),

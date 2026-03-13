@@ -18,7 +18,7 @@ function jsonResponse(body, init = {}) {
   });
 }
 
-test("AdsService serializes MVP method envelopes to /ads and returns typed results", async () => {
+test("AdsService serializes supported method envelopes to /ads and returns typed results", async () => {
   const captured = [];
 
   const transport = new YandexDirectTransport({
@@ -47,11 +47,23 @@ test("AdsService serializes MVP method envelopes to /ads and returns typed resul
       if (body.method === "update") {
         return jsonResponse({ result: { UpdateResults: [{ Id: 10 }] } });
       }
+      if (body.method === "delete") {
+        return jsonResponse({ result: { DeleteResults: [{ Id: 10 }] } });
+      }
       if (body.method === "suspend") {
         return jsonResponse({ result: { SuspendResults: [{ Id: 10 }] } });
       }
       if (body.method === "resume") {
         return jsonResponse({ result: { ResumeResults: [{ Id: 10 }] } });
+      }
+      if (body.method === "archive") {
+        return jsonResponse({ result: { ArchiveResults: [{ Id: 10 }] } });
+      }
+      if (body.method === "unarchive") {
+        return jsonResponse({ result: { UnarchiveResults: [{ Id: 10 }] } });
+      }
+      if (body.method === "moderate") {
+        return jsonResponse({ result: { ModerateResults: [{ Id: 10 }] } });
       }
 
       throw new Error(`Unexpected method: ${body.method}`);
@@ -88,16 +100,20 @@ test("AdsService serializes MVP method envelopes to /ads and returns typed resul
       },
     ],
   });
+  await ads.delete({ SelectionCriteria: { Ids: [10] } });
   await ads.suspend({ SelectionCriteria: { Ids: [10] } });
   await ads.resume({ SelectionCriteria: { Ids: [10] } });
+  await ads.archive({ SelectionCriteria: { Ids: [10] } });
+  await ads.unarchive({ SelectionCriteria: { Ids: [10] } });
+  await ads.moderate({ SelectionCriteria: { Ids: [10] } });
 
-  assert.equal(captured.length, 5);
+  assert.equal(captured.length, 9);
   for (const request of captured) {
     assert.equal(request.url, "https://api.direct.yandex.com/json/v5/ads");
   }
   assert.deepEqual(
     captured.map((request) => request.body.method),
-    ["get", "add", "update", "suspend", "resume"],
+    ["get", "add", "update", "delete", "suspend", "resume", "archive", "unarchive", "moderate"],
   );
   assert.equal(getResponse.data.result.Ads[0].Type, "TEXT_AD");
   assert.equal(getResponse.data.result.Ads[0].TextAd.Title, "Hello");
@@ -185,4 +201,31 @@ test("AdsService enforces result envelope shape for state transitions", async ()
       return true;
     },
   );
+});
+
+test("AdsService validates delete/archive/unarchive/moderate result array keys", async () => {
+  const methods = [
+    ["delete", "DeleteResults", (service) => service.delete({ SelectionCriteria: { Ids: [1] } })],
+    ["archive", "ArchiveResults", (service) => service.archive({ SelectionCriteria: { Ids: [1] } })],
+    ["unarchive", "UnarchiveResults", (service) => service.unarchive({ SelectionCriteria: { Ids: [1] } })],
+    ["moderate", "ModerateResults", (service) => service.moderate({ SelectionCriteria: { Ids: [1] } })],
+  ];
+
+  for (const [method, expectedKey, call] of methods) {
+    const transport = new YandexDirectTransport({
+      token: "test-token",
+      fetch: async () => jsonResponse({ result: {} }),
+    });
+    const ads = new AdsService(transport);
+
+    await assert.rejects(
+      () => call(ads),
+      (error) => {
+        assert.ok(error instanceof TransportError);
+        assert.match(error.message, new RegExp(expectedKey));
+        return true;
+      },
+      `Expected ${method} to validate ${expectedKey}`,
+    );
+  }
 });
