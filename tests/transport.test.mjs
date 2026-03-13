@@ -67,6 +67,26 @@ test("requestService composes headers and returns metadata", async () => {
   assert.equal(response.metadata.unitsUsedLogin, "agency-client");
 });
 
+test("requestService supports explicit API version override for official v501 services", async () => {
+  let captured = null;
+
+  const transport = new YandexDirectTransport({
+    token: "very-secret",
+    fetch: async (url, init) => {
+      captured = { url, init };
+      return jsonResponse({ result: { ok: true } });
+    },
+  });
+
+  await transport.requestService(
+    "ads",
+    { method: "get", params: { SelectionCriteria: { Ids: [1] }, FieldNames: ["Id"] } },
+    { apiVersion: "v501", idempotent: true },
+  );
+
+  assert.equal(captured.url, "https://api.direct.yandex.com/json/v501/ads");
+});
+
 test("idempotent retry guard allows retries only when enabled", async () => {
   let nonIdempotentCalls = 0;
   const nonIdempotentTransport = new YandexDirectTransport({

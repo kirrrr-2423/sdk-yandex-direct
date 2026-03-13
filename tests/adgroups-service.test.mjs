@@ -53,7 +53,7 @@ test("AdGroupsService.get validates params and retries as idempotent by default"
   assert.deepEqual(response.data.result.AdGroups, [{ Id: 1, Name: "Main group" }]);
 });
 
-test("AdGroupsService methods map to add/update/suspend/resume/delete envelopes", async () => {
+test("AdGroupsService methods map to add/update/delete envelopes", async () => {
   const calledMethods = [];
 
   const transport = new YandexDirectTransport({
@@ -67,10 +67,6 @@ test("AdGroupsService methods map to add/update/suspend/resume/delete envelopes"
           return jsonResponse({ result: { AddResults: [{ Id: 101 }] } });
         case "update":
           return jsonResponse({ result: { UpdateResults: [{ Id: 101 }] } });
-        case "suspend":
-          return jsonResponse({ result: { SuspendResults: [{ Id: 101 }] } });
-        case "resume":
-          return jsonResponse({ result: { ResumeResults: [{ Id: 101 }] } });
         case "delete":
           return jsonResponse({ result: { DeleteResults: [{ Id: 101 }] } });
         default:
@@ -94,16 +90,6 @@ test("AdGroupsService methods map to add/update/suspend/resume/delete envelopes"
       Name: "Group 1 updated",
     }],
   });
-  const suspend = await service.suspend({
-    SelectionCriteria: {
-      Ids: [101],
-    },
-  });
-  const resume = await service.resume({
-    SelectionCriteria: {
-      Ids: [101],
-    },
-  });
   const deleted = await service.delete({
     SelectionCriteria: {
       Ids: [101],
@@ -112,10 +98,8 @@ test("AdGroupsService methods map to add/update/suspend/resume/delete envelopes"
 
   assert.deepEqual(add.data.result.AddResults, [{ Id: 101 }]);
   assert.deepEqual(update.data.result.UpdateResults, [{ Id: 101 }]);
-  assert.deepEqual(suspend.data.result.SuspendResults, [{ Id: 101 }]);
-  assert.deepEqual(resume.data.result.ResumeResults, [{ Id: 101 }]);
   assert.deepEqual(deleted.data.result.DeleteResults, [{ Id: 101 }]);
-  assert.deepEqual(calledMethods, ["add", "update", "suspend", "resume", "delete"]);
+  assert.deepEqual(calledMethods, ["add", "update", "delete"]);
 });
 
 test("AdGroupsService enforces required params for selector/entity/ids payloads", async () => {
@@ -145,15 +129,6 @@ test("AdGroupsService enforces required params for selector/entity/ids payloads"
   );
 
   await assert.rejects(
-    () => service.suspend({
-      SelectionCriteria: {
-        Ids: [],
-      },
-    }),
-    /at least one ID/,
-  );
-
-  await assert.rejects(
     () => service.delete({
       SelectionCriteria: {
         Ids: [0],
@@ -178,7 +153,7 @@ test("AdGroupsService propagates envelope failures via shared error mapper", asy
   const service = new AdGroupsService(transport);
 
   await assert.rejects(
-    () => service.resume({ SelectionCriteria: { Ids: [123] } }),
+    () => service.delete({ SelectionCriteria: { Ids: [123] } }),
     (error) => {
       assert.ok(error instanceof AuthError);
       assert.equal(error.requestId, "req-auth");

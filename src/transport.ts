@@ -24,12 +24,14 @@ import type {
   RetryPolicy,
   TransportMetadata,
   TransportResponse,
+  YandexDirectApiVersion,
   YandexDirectClientConfig,
 } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://api.direct.yandex.com";
 const DEFAULT_LANGUAGE = "en";
 const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_API_VERSION: YandexDirectApiVersion = "v5";
 
 const DEFAULT_RETRY_POLICY: RetryPolicy = {
   maxAttempts: 2,
@@ -51,6 +53,10 @@ interface ExecuteRequest {
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+function resolveApiVersion(value: YandexDirectApiVersion | undefined): YandexDirectApiVersion {
+  return value ?? DEFAULT_API_VERSION;
 }
 
 function coerceHeaders(input?: HeaderMap): Record<string, string> {
@@ -231,7 +237,7 @@ export class YandexDirectTransport {
       service: resolvedService,
       body: envelope,
       options,
-      url: `${this.baseUrl}/json/v5/${resolvedService}`,
+      url: `${this.baseUrl}/json/${resolveApiVersion(options.apiVersion)}/${resolvedService}`,
     });
 
     return this.execute<JsonEnvelope<T>>(request);
@@ -423,6 +429,7 @@ export class YandexDirectTransport {
         service: input.service,
         method: this.extractMethod(input.body),
         clientLogin,
+        apiVersion: input.options.apiVersion,
       });
       Object.assign(headers, extraHeaders ?? {});
     }

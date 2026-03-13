@@ -16,6 +16,13 @@ test("root exports shared runtime boundaries", () => {
   assert.equal(typeof sdk.ensureIds, "function");
   assert.equal(typeof sdk.ensurePaginationPage, "function");
   assert.equal(typeof sdk.AdGroupsService, "function");
+  assert.equal(typeof sdk.AdImagesService, "function");
+  assert.equal(typeof sdk.AgencyClientsService, "function");
+  assert.equal(typeof sdk.BidModifiersService, "function");
+  assert.equal(typeof sdk.DictionariesService, "function");
+  assert.equal(typeof sdk.KeywordBidsService, "function");
+  assert.equal(typeof sdk.KeywordsService, "function");
+  assert.equal(typeof sdk.SitelinksService, "function");
 });
 
 test("ensureJsonRpcRequestEnvelope accepts valid envelope", () => {

@@ -33,8 +33,8 @@ test("AdsService serializes supported method envelopes to /ads and returns typed
             Ads: [
               {
                 Id: 1,
-                Type: "TEXT_AD",
-                TextAd: { Title: "Hello", Text: "World" },
+                Type: "DYNAMIC_TEXT_AD",
+                DynamicTextAd: { Title: "Hello", Text: "World", DomainUrl: "https://example.com" },
               },
             ],
             LimitedBy: 1000,
@@ -75,16 +75,15 @@ test("AdsService serializes supported method envelopes to /ads and returns typed
   const getResponse = await ads.get({
     SelectionCriteria: { Ids: [1] },
     FieldNames: ["Id", "Type"],
-    TextAdFieldNames: ["Title", "Text"],
+    DynamicTextAdFieldNames: ["Title", "Text"],
   });
   await ads.add({
     Ads: [
       {
         AdGroupId: 101,
-        TextAd: {
-          Title: "New ad",
-          Text: "Body",
-          Href: "https://example.com",
+        ShoppingAd: {
+          FeedId: 100,
+          OfferId: "sku-1",
         },
       },
     ],
@@ -93,9 +92,8 @@ test("AdsService serializes supported method envelopes to /ads and returns typed
     Ads: [
       {
         Id: 10,
-        MobileAppAd: {
-          Title: "Updated app ad",
-          Text: "Install now",
+        SmartAdBuilderAd: {
+          Creative: { CreativeId: 77 },
         },
       },
     ],
@@ -115,11 +113,11 @@ test("AdsService serializes supported method envelopes to /ads and returns typed
     captured.map((request) => request.body.method),
     ["get", "add", "update", "delete", "suspend", "resume", "archive", "unarchive", "moderate"],
   );
-  assert.equal(getResponse.data.result.Ads[0].Type, "TEXT_AD");
-  assert.equal(getResponse.data.result.Ads[0].TextAd.Title, "Hello");
+  assert.equal(getResponse.data.result.Ads[0].Type, "DYNAMIC_TEXT_AD");
+  assert.equal(getResponse.data.result.Ads[0].DynamicTextAd.Title, "Hello");
 });
 
-test("AdsService rejects unsupported add payload format before transport call", async () => {
+test("AdsService accepts additional official ad payload formats before transport call", async () => {
   let fetchCalls = 0;
   const transport = new YandexDirectTransport({
     token: "test-token",
@@ -130,27 +128,24 @@ test("AdsService rejects unsupported add payload format before transport call", 
   });
   const ads = new AdsService(transport);
 
-  await assert.rejects(
-    () => ads.add({
-      Ads: [
-        {
-          AdGroupId: 5,
-          DynamicTextAd: { DomainUrl: "https://example.com" },
-        },
-      ],
-    }),
-    (error) => {
-      assert.ok(error instanceof UnsupportedAdFormatError);
-      assert.equal(error.code, "UNSUPPORTED_AD_FORMAT");
-      assert.equal(error.reason, "unsupported");
-      return true;
-    },
-  );
+  const response = await ads.add({
+    Ads: [
+      {
+        AdGroupId: 5,
+        DynamicTextAd: { DomainUrl: "https://example.com" },
+      },
+      {
+        AdGroupId: 6,
+        CpcVideoAdBuilderAd: { Creative: { CreativeId: 12 } },
+      },
+    ],
+  });
 
-  assert.equal(fetchCalls, 0);
+  assert.equal(fetchCalls, 1);
+  assert.equal(response.data.result.AddResults[0].Id, 1);
 });
 
-test("AdsService rejects unsupported ad format in get result envelope", async () => {
+test("AdsService rejects legacy or unknown ad format payloads", async () => {
   const transport = new YandexDirectTransport({
     token: "test-token",
     fetch: async () => jsonResponse({
@@ -158,9 +153,9 @@ test("AdsService rejects unsupported ad format in get result envelope", async ()
         Ads: [
           {
             Id: 1,
-            Type: "DYNAMIC_TEXT_AD",
-            DynamicTextAd: {
-              DomainUrl: "https://example.com",
+            Type: "IMAGE_AD",
+            PerformanceAd: {
+              Title: "unsupported legacy payload",
             },
           },
         ],

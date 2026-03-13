@@ -4,7 +4,6 @@ import type {
   JsonRpcRequestEnvelope,
   PaginationPage,
   SelectionCriteriaBase,
-  StateTransitionMutationResult,
   UpdateMutationResult,
   YandexDirectId,
   YandexDirectIds,
@@ -27,11 +26,12 @@ export type AdGroupType =
   | "CPM_BANNER_AD_GROUP"
   | "CPM_VIDEO_AD_GROUP"
   | "SMART_AD_GROUP"
-  | "UNIFIED_AD_GROUP";
+  | "UNIFIED_AD_GROUP"
+  | (string & {});
 
-export type AdGroupStatus = "ACCEPTED" | "DRAFT" | "MODERATION" | "PREACCEPTED" | "REJECTED";
-export type AdGroupServingStatus = "ELIGIBLE" | "RARELY_SERVED";
-export type AdGroupAppIconStatus = "ACCEPTED" | "MODERATION" | "REJECTED";
+export type AdGroupStatus = "ACCEPTED" | "DRAFT" | "MODERATION" | "PREACCEPTED" | "REJECTED" | (string & {});
+export type AdGroupServingStatus = "ELIGIBLE" | "RARELY_SERVED" | (string & {});
+export type AdGroupAppIconStatus = "ACCEPTED" | "MODERATION" | "REJECTED" | (string & {});
 
 export type AdGroupField =
   | "Id"
@@ -44,7 +44,9 @@ export type AdGroupField =
   | "TrackingParams"
   | "Status"
   | "ServingStatus"
-  | "Type";
+  | "Type"
+  | "Subtype"
+  | (string & {});
 
 export interface ArrayOfString {
   Items: readonly string[];
@@ -126,6 +128,7 @@ export interface AdGroupGetItem {
   Status?: AdGroupStatus;
   ServingStatus?: AdGroupServingStatus;
   Type?: AdGroupType;
+  Subtype?: string;
   [key: string]: unknown;
 }
 
@@ -136,8 +139,6 @@ export interface AdGroupsGetResult {
 export type AdGroupsAddResult = AddMutationResult;
 export type AdGroupsDeleteResult = DeleteMutationResult;
 export type AdGroupsUpdateResult = UpdateMutationResult;
-export type AdGroupsSuspendResult = StateTransitionMutationResult<"SuspendResults">;
-export type AdGroupsResumeResult = StateTransitionMutationResult<"ResumeResults">;
 
 function asRecord(value: unknown, name: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -445,38 +446,6 @@ export class AdGroupsService {
       ADGROUPS_SERVICE,
       body,
       applyIdempotency(options, false),
-    );
-  }
-
-  async suspend(
-    params: AdGroupsStateRequest,
-    options: RequestOptions = {},
-  ): Promise<TransportResponse<JsonEnvelope<AdGroupsSuspendResult>>> {
-    const validated = ensureStateRequest(params);
-    const body: JsonRpcRequestEnvelope<"suspend", AdGroupsStateRequest> = {
-      method: "suspend",
-      params: validated,
-    };
-    return this.transport.requestService<AdGroupsSuspendResult>(
-      ADGROUPS_SERVICE,
-      body,
-      applyIdempotency(options, true),
-    );
-  }
-
-  async resume(
-    params: AdGroupsStateRequest,
-    options: RequestOptions = {},
-  ): Promise<TransportResponse<JsonEnvelope<AdGroupsResumeResult>>> {
-    const validated = ensureStateRequest(params);
-    const body: JsonRpcRequestEnvelope<"resume", AdGroupsStateRequest> = {
-      method: "resume",
-      params: validated,
-    };
-    return this.transport.requestService<AdGroupsResumeResult>(
-      ADGROUPS_SERVICE,
-      body,
-      applyIdempotency(options, true),
     );
   }
 

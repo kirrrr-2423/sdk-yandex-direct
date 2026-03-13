@@ -1,11 +1,19 @@
 # Yandex Direct SDK
 
-This package provides transport/auth primitives and typed Campaigns + AdGroups + Ads service methods for Yandex Direct API v5:
+This package provides transport/auth primitives and typed Campaigns + AdGroups + Ads + AdImages + Dictionaries + AgencyClients + BidModifiers + Keywords + KeywordBids + Sitelinks service methods for Yandex Direct API v5:
 
 - JSON service endpoint: `/json/v5/{service}`
 - Reports endpoint: `/json/v5/reports`
 - Ads service methods: `get`, `add`, `update`, `delete`, `suspend`, `resume`, `archive`, `unarchive`, `moderate`
-- AdGroups service methods: `get`, `add`, `update`, `delete`, `suspend`, `resume`
+  with broad payload support for `TextAd`, `DynamicTextAd`, `MobileAppAd`, image/builder ads, `ShoppingAd`, and `ListingAd`
+- AdImages service methods: `get`, `add`, `delete`
+- AgencyClients service methods: `get`, `add`, `update`
+- BidModifiers service methods: `get`, `add`, `set`, `delete`
+- AdGroups service methods: `get`, `add`, `update`, `delete`
+- Dictionaries service methods: `get`, `getGeoRegions`
+- KeywordBids service methods: `get`, `set`, `setAuto`
+- Keywords service methods: `get`, `add`, `update`, `delete`, `suspend`, `resume`
+- Sitelinks service methods: `get`, `add`, `delete`
 - Typed client config and request options
 - Public client with Campaigns methods: `get`, `add`, `update`, `delete`, `suspend`, `resume`, `archive`, `unarchive`
 - Deterministic timeout + retry defaults with idempotent-safe guard
@@ -72,6 +80,11 @@ await client.campaigns.suspend({ SelectionCriteria: { Ids: [12345] } });
 await client.campaigns.resume({ SelectionCriteria: { Ids: [12345] } });
 await client.campaigns.archive({ SelectionCriteria: { Ids: [12345] } });
 await client.campaigns.unarchive({ SelectionCriteria: { Ids: [12345] } });
+
+await client.campaigns.get(
+  { FieldNames: ["Id", "Name"] },
+  { apiVersion: "v501", idempotent: true },
+);
 ```
 
 ## Authentication
@@ -102,6 +115,37 @@ const ads = await client.ads.get({
 
 await client.ads.archive({ SelectionCriteria: { Ids: [10] } });
 
+const imageUpload = await client.adImages.add({
+  AdImages: [{ ImageData: "<base64>", Name: "Main banner" }],
+});
+
+const dictionaries = await client.dictionaries.get({
+  DictionaryNames: ["TimeZones", "GeoRegions"],
+});
+
+const agencyClients = await client.agencyClients.get({
+  FieldNames: ["ClientId", "Login", "ClientInfo"],
+});
+
+const keywords = await client.keywords.get({
+  SelectionCriteria: { AdGroupIds: [12345] },
+  FieldNames: ["Id", "Keyword", "Bid"],
+});
+
+const keywordBids = await client.keywordBids.get({
+  SelectionCriteria: { KeywordIds: [1] },
+  FieldNames: ["KeywordId", "SearchBid"],
+});
+
+const bidModifiers = await client.bidModifiers.get({
+  SelectionCriteria: { CampaignIds: [12345] },
+  FieldNames: ["BidModifierId", "CampaignId"],
+});
+
+const sitelinks = await client.sitelinks.get({
+  FieldNames: ["Id", "Sitelinks"],
+});
+
 const groups = await client.adGroups.get({
   SelectionCriteria: { CampaignIds: [12345] },
   FieldNames: ["Id", "Name", "CampaignId", "Status"],
@@ -112,6 +156,16 @@ await client.adGroups.delete({
     Ids: groups.data.result.AdGroups.map((group) => group.Id).filter(Boolean),
   },
 });
+
+console.log(
+  imageUpload.data.result.AddResults,
+  dictionaries.data.result.TimeZones,
+  agencyClients.data.result.Clients,
+  bidModifiers.data.result.BidModifiers,
+  keywords.data.result.Keywords,
+  keywordBids.data.result.KeywordBids,
+  sitelinks.data.result.SitelinksSets,
+);
 ```
 
 ## AdGroupsService
@@ -130,21 +184,9 @@ const getResponse = await adGroups.get({
   FieldNames: ["Id", "Name", "CampaignId", "Status"],
 });
 
-await adGroups.suspend({
-  SelectionCriteria: {
-    Ids: getResponse.data.result.AdGroups.map((group) => group.Id).filter(Boolean),
-  },
-});
-
-await adGroups.resume({
-  SelectionCriteria: {
-    Ids: [111, 222],
-  },
-});
-
 await adGroups.delete({
   SelectionCriteria: {
-    Ids: [111, 222],
+    Ids: getResponse.data.result.AdGroups.map((group) => group.Id).filter(Boolean),
   },
 });
 ```
@@ -169,6 +211,23 @@ const config: YandexDirectClientConfig = {
     backoffFactor: 2,
   },
 };
+```
+
+## API Versioning
+
+Service requests use `v5` by default. For official `v501` service variants, pass `apiVersion` in request options:
+
+```ts
+await client.ads.get(
+  {
+    SelectionCriteria: { Ids: [1] },
+    FieldNames: ["Id", "Type"],
+  },
+  {
+    apiVersion: "v501",
+    idempotent: true,
+  },
+);
 ```
 
 ## Retry Behavior

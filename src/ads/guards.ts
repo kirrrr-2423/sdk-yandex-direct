@@ -1,10 +1,10 @@
 import { ensurePositiveInteger } from "../shared/validation.js";
 import type { AdsGetResult, SupportedAdAdd, SupportedAdFormatKey, SupportedAdGet, SupportedAdUpdate } from "./types.js";
-import { KNOWN_UNSUPPORTED_AD_FORMAT_KEYS, SUPPORTED_AD_FORMAT_KEYS } from "./types.js";
+import { LEGACY_OR_UNKNOWN_AD_FORMAT_KEYS, SUPPORTED_AD_FORMAT_KEYS } from "./types.js";
 import { UnsupportedAdFormatError } from "./errors.js";
 
 const SUPPORTED_AD_FORMAT_SET = new Set<string>(SUPPORTED_AD_FORMAT_KEYS);
-const KNOWN_UNSUPPORTED_AD_FORMAT_SET = new Set<string>(KNOWN_UNSUPPORTED_AD_FORMAT_KEYS);
+const LEGACY_OR_UNKNOWN_AD_FORMAT_SET = new Set<string>(LEGACY_OR_UNKNOWN_AD_FORMAT_KEYS);
 
 function asRecord(value: unknown, name: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -22,13 +22,18 @@ function pickDeclaredAdFormatKeys(record: Record<string, unknown>): string[] {
 }
 
 function typeToPayloadKey(typeValue: unknown): string | undefined {
-  if (typeValue === "TEXT_AD") {
-    return "TextAd";
-  }
-  if (typeValue === "MOBILE_APP_AD") {
-    return "MobileAppAd";
-  }
-  return undefined;
+  const mapping: Record<string, string> = {
+    TEXT_AD: "TextAd",
+    MOBILE_APP_AD: "MobileAppAd",
+    DYNAMIC_TEXT_AD: "DynamicTextAd",
+    SMART_AD: "SmartAdBuilderAd",
+    SHOPPING_AD: "ShoppingAd",
+    LISTING_AD: "ListingAd",
+    CPM_BANNER_AD: "CpmBannerAdBuilderAd",
+    CPM_VIDEO_AD: "CpmVideoAdBuilderAd",
+  };
+
+  return typeof typeValue === "string" ? mapping[typeValue] : undefined;
 }
 
 function ensureSupportedPayloadKey(
@@ -37,13 +42,13 @@ function ensureSupportedPayloadKey(
 ): SupportedAdFormatKey {
   const declaredFormatKeys = pickDeclaredAdFormatKeys(record);
   const knownUnsupported = declaredFormatKeys.find(
-    (key) => !SUPPORTED_AD_FORMAT_SET.has(key) && KNOWN_UNSUPPORTED_AD_FORMAT_SET.has(key),
+    (key) => !SUPPORTED_AD_FORMAT_SET.has(key) && LEGACY_OR_UNKNOWN_AD_FORMAT_SET.has(key),
   );
   if (knownUnsupported) {
     throw new UnsupportedAdFormatError({
       reason: "unsupported",
       receivedFormat: knownUnsupported,
-      message: `${context} uses unsupported ad format payload key "${knownUnsupported}". Supported keys: ${SUPPORTED_AD_FORMAT_KEYS.join(", ")}.`,
+      message: `${context} uses unsupported or legacy ad format payload key "${knownUnsupported}". Supported keys: ${SUPPORTED_AD_FORMAT_KEYS.join(", ")}.`,
     });
   }
 
@@ -82,7 +87,7 @@ function ensureSupportedPayloadKey(
     throw new UnsupportedAdFormatError({
       reason: "unsupported",
       receivedFormat: record.Type,
-      message: `${context} uses unsupported Type="${record.Type}". Supported types: TEXT_AD, MOBILE_APP_AD.`,
+      message: `${context} uses unsupported Type="${record.Type}". Provide one supported payload key: ${SUPPORTED_AD_FORMAT_KEYS.join(", ")}.`,
     });
   }
 
@@ -143,4 +148,3 @@ function ensureSupportedAdGet(value: unknown, name: string): SupportedAdGet {
   ensureSupportedPayloadKey(ad, name);
   return ad as SupportedAdGet;
 }
-

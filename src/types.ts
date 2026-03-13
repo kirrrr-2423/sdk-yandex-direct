@@ -8,12 +8,14 @@ export type HeaderValue = string | number | boolean | null | undefined;
 export type HeaderMap = Record<string, HeaderValue>;
 
 export type TokenProvider = () => string | Promise<string>;
+export type YandexDirectApiVersion = "v5" | "v501";
 
 export interface HeaderProviderContext {
   endpoint: "service" | "reports";
   service?: string;
   method?: string;
   clientLogin?: string;
+  apiVersion?: YandexDirectApiVersion;
 }
 
 export type HeaderProvider = (
@@ -108,6 +110,7 @@ export interface RequestOptions {
   timeoutMs?: number;
   idempotent?: boolean;
   clientLogin?: string;
+  apiVersion?: YandexDirectApiVersion;
   headers?: HeaderMap;
   metadata?: RequestMetadata;
 }
